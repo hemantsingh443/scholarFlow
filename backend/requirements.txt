@@ -12,3 +12,5 @@ chromadb>=0.4.22
 sentence-transformers>=2.2.0
 httpx>=0.26.0
 python-dotenv>=1.0.0
+fpdf2>=2.7.0
+markdown2>=2.4.0

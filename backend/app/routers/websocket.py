@@ -2,9 +2,11 @@
 WebSocket endpoint for real-time research updates.
 
 Provides bidirectional communication for streaming research progress.
+Also includes REST endpoints for session retrieval and PDF download.
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import Response
 from typing import Dict, Set
 import asyncio
 import json
@@ -13,6 +15,7 @@ import uuid
 
 from app.agents.state import create_initial_state
 from app.agents.graph import get_research_graph
+from app.tools.pdf_report import markdown_to_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +24,11 @@ router = APIRouter()
 # Active WebSocket connections per session
 active_connections: Dict[str, Set[WebSocket]] = {}
 
-# Session state storage
+# Session state storage (in-memory, persists as long as server is running)
 ws_sessions: Dict[str, dict] = {}
+
+# Track if client is still connected
+client_connected: Dict[str, bool] = {}
 
 
 class ConnectionManager:
@@ -53,15 +59,129 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+async def safe_send(websocket: WebSocket, session_id: str, message: dict) -> bool:
+    """
+    Safely send a message via WebSocket.
+    Returns True if sent successfully, False if client disconnected.
+    Does NOT raise exceptions - allows caller to continue processing.
+    """
+    if not client_connected.get(session_id, True):
+        return False
+    
+    try:
+        await websocket.send_json(message)
+        return True
+    except Exception as e:
+        logger.info(f"Client disconnected from session {session_id}")
+        client_connected[session_id] = False
+        return False
+
+
+# ============================================
+# REST Endpoints for Session Persistence
+# ============================================
+
+@router.get("/api/session/{session_id}")
+async def get_session(session_id: str):
+    """
+    Retrieve a session by ID.
+    
+    Used by frontend to restore session state after page refresh.
+    """
+    if session_id not in ws_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session = ws_sessions[session_id]
+    
+    # Prepare response (same format as WebSocket progress messages)
+    return {
+        "session_id": session_id,
+        "status": session.get("status", "unknown"),
+        "plan": session.get("plan", []),
+        "current_task_index": session.get("current_task_index", 0),
+        "documents": [
+            {
+                "title": d.get("title", ""),
+                "arxiv_id": d.get("arxiv_id", ""),
+                "pdf_url": d.get("pdf_url", ""),
+                "summary": d.get("summary", "")[:200] if d.get("summary") else ""
+            }
+            for d in session.get("documents", [])
+        ],
+        "report": session.get("report"),
+        "original_query": session.get("original_query", "")
+    }
+
+
+@router.get("/api/session/{session_id}/pdf")
+async def download_session_pdf(session_id: str):
+    """
+    Download the session report as PDF.
+    """
+    if session_id not in ws_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session = ws_sessions[session_id]
+    report = session.get("report")
+    
+    if not report:
+        raise HTTPException(status_code=400, detail="No report available for this session")
+    
+    # Generate PDF
+    try:
+        query = session.get("original_query", "Research Report")
+        pdf_bytes = markdown_to_pdf(report, title=f"ScholarFlow: {query[:50]}")
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="scholarflow_report_{session_id[:8]}.pdf"'
+            }
+        )
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+
+
+@router.get("/api/sessions")
+async def list_sessions():
+    """
+    List all active sessions (for debugging).
+    """
+    return {
+        "count": len(ws_sessions),
+        "sessions": [
+            {
+                "session_id": sid,
+                "status": session.get("status"),
+                "query": session.get("original_query", "")[:50]
+            }
+            for sid, session in ws_sessions.items()
+        ]
+    }
+
+
+# ============================================
+# WebSocket Research Endpoint
+# ============================================
+
 async def run_research_step_by_step(websocket: WebSocket, session_id: str, query: str):
     """
     Run research workflow and stream progress via WebSocket.
     
     Uses graph.stream() for step-by-step execution instead of invoke().
+    Stores session state after each node for persistence.
+    
+    IMPORTANT: Continues processing even if WebSocket disconnects,
+    so polling can retrieve the final result.
     """
+    # Mark client as connected
+    client_connected[session_id] = True
+    
     try:
-        # Send initial message
-        await websocket.send_json({
+        # Send initial message (non-fatal if fails)
+        await safe_send(websocket, session_id, {
             "type": "started",
             "session_id": session_id,
             "message": "Research session started"
@@ -69,6 +189,13 @@ async def run_research_step_by_step(websocket: WebSocket, session_id: str, query
         
         # Create initial state
         initial_state = create_initial_state(session_id, query)
+        
+        # Store initial state immediately for persistence
+        ws_sessions[session_id] = {
+            **initial_state,
+            "original_query": query,
+            "status": "planning"
+        }
         
         # Get the research graph
         graph = get_research_graph()
@@ -99,8 +226,15 @@ async def run_research_step_by_step(websocket: WebSocket, session_id: str, query
                         else:
                             current_state[key] = value
                 
-                # Send update to client
-                await websocket.send_json({
+                # *** PERSISTENCE: Store state after EACH node ***
+                ws_sessions[session_id] = {
+                    **current_state,
+                    "original_query": query,
+                    "status": current_state.get("status", "unknown")
+                }
+                
+                # Try to send update to client (continues even if fails)
+                await safe_send(websocket, session_id, {
                     "type": "progress",
                     "node": node_name,
                     "step": step_count,
@@ -114,7 +248,7 @@ async def run_research_step_by_step(websocket: WebSocket, session_id: str, query
                     "logs": current_state.get("logs", [])[-5:]  # Last 5 logs
                 })
                 
-                # Small delay to ensure message is sent
+                # Small delay
                 await asyncio.sleep(0.05)
         
         # Get final report
@@ -128,11 +262,18 @@ async def run_research_step_by_step(websocket: WebSocket, session_id: str, query
                 elif hasattr(last_msg, "content"):
                     report = last_msg.content
         
-        # Store final state
-        ws_sessions[session_id] = current_state
+        # *** PERSISTENCE: Store final state with report ***
+        ws_sessions[session_id] = {
+            **current_state,
+            "original_query": query,
+            "status": "completed",
+            "report": report
+        }
         
-        # Send completion
-        await websocket.send_json({
+        logger.info(f"Research completed for session {session_id}")
+        
+        # Try to send completion (continues even if fails)
+        await safe_send(websocket, session_id, {
             "type": "completed",
             "session_id": session_id,
             "report": report,
@@ -147,17 +288,22 @@ async def run_research_step_by_step(websocket: WebSocket, session_id: str, query
             ]
         })
         
-    except WebSocketDisconnect:
-        logger.info(f"Client disconnected from session {session_id}")
     except Exception as e:
         logger.error(f"Research error: {e}")
-        try:
-            await websocket.send_json({
-                "type": "error",
-                "message": str(e)
-            })
-        except:
-            pass
+        # Store error state
+        ws_sessions[session_id] = {
+            **ws_sessions.get(session_id, {}),
+            "status": "error",
+            "error": str(e)
+        }
+        # Try to send error (non-fatal if fails)
+        await safe_send(websocket, session_id, {
+            "type": "error",
+            "message": str(e)
+        })
+    finally:
+        # Cleanup
+        client_connected.pop(session_id, None)
 
 
 @router.websocket("/ws/research")
@@ -189,10 +335,13 @@ async def websocket_research(websocket: WebSocket):
         logger.info(f"Starting WebSocket research: {session_id} - {query}")
         
         # Run research with streaming updates
+        # This will continue even if the WebSocket disconnects
         await run_research_step_by_step(websocket, session_id, query)
         
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected: {session_id}")
+        # Mark as disconnected so safe_send stops trying
+        client_connected[session_id] = False
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         try:

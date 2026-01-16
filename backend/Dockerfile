@@ -18,22 +18,28 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Create directories for data persistence
-RUN mkdir -p /app/chroma_db
+# Create directories for data 
+RUN mkdir -p /tmp/chroma_db /tmp/huggingface
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV CHROMA_PERSIST_DIR=/app/chroma_db
+ENV CHROMA_PERSIST_DIR=/tmp/chroma_db
+ENV HF_HOME=/tmp/huggingface
+ENV TRANSFORMERS_CACHE=/tmp/huggingface
 
-# For Render free tier - use lightweight mode (no sentence-transformers download)
+# For Render free tier - use lightweight mode
 ENV LIGHTWEIGHT_MODE=true
+
+# Disable HuggingFace online checks (use cached models)
+ENV HF_HUB_OFFLINE=0
+ENV SENTENCE_TRANSFORMERS_HOME=/tmp/huggingface
 
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8000/health')" || exit 1
 
 # Run with uvicorn

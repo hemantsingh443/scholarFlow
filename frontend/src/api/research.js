@@ -16,6 +16,13 @@ export function getWebSocketUrl() {
 }
 
 /**
+ * Get the API base URL for REST calls.
+ */
+export function getApiBaseUrl() {
+  return API_BASE;
+}
+
+/**
  * Start a new research session.
  * 
  * @param {string} query - The research query

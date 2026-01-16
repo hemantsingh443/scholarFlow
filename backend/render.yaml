@@ -10,10 +10,8 @@ services:
       - key: LIGHTWEIGHT_MODE
         value: "true"
       - key: CHROMA_PERSIST_DIR
-        value: "/app/chroma_db"
-    disk:
-      name: chroma-storage
-      mountPath: /app/chroma_db
-      sizeGB: 1
+        value: "/tmp/chroma_db"
+      - key: HF_HOME
+        value: "/tmp/huggingface"
     healthCheckPath: /health
     plan: free

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import ResearchInput from './components/ResearchInput';
 import AgentActivity from './components/AgentActivity';
 import { useResearch } from './hooks/useResearch';
-import { Moon, Sun, Github, BookOpen, Info } from 'lucide-react';
+import { Moon, Sun, Github, BookOpen, Info, AlertCircle, History, Trash2, ChevronDown, X } from 'lucide-react';
 
 /**
  * ScholarFlow - Single Panel Research Interface
@@ -11,15 +11,29 @@ import { Moon, Sun, Github, BookOpen, Info } from 'lucide-react';
  */
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
-    // Check local storage or system preference
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || 
         (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
     return false;
   });
+  
+  const [showHistory, setShowHistory] = useState(false);
 
-  const { session, isLoading, error, activities, startResearch, clearSession } = useResearch();
+  const { 
+    session, 
+    history,
+    isLoading, 
+    isPolling, 
+    error, 
+    activities, 
+    startResearch, 
+    clearSession,
+    loadSessionFromHistory,
+    clearHistory,
+    downloadMarkdown, 
+    downloadPDF 
+  } = useResearch();
 
   // Apply dark mode class
   useEffect(() => {
@@ -33,6 +47,11 @@ function App() {
   }, [darkMode]);
 
   const toggleTheme = () => setDarkMode(!darkMode);
+
+  const handleHistorySelect = (sessionId) => {
+    loadSessionFromHistory(sessionId);
+    setShowHistory(false);
+  };
 
   return (
     <div className="min-h-screen paper-texture transition-colors duration-300">
@@ -68,8 +87,8 @@ function App() {
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Status Indicator (only when researching) */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Status Indicator */}
             {isLoading && (
               <span 
                 className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium font-mono uppercase tracking-wider"
@@ -81,6 +100,81 @@ function App() {
                 <span className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: 'var(--status-active)' }} />
                 Active
               </span>
+            )}
+
+            {/* History Button */}
+            {history.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="flex items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <History className="w-4 h-4" />
+                  <span className="hidden sm:inline text-sm">History</span>
+                  <span 
+                    className="w-4 h-4 rounded-full text-xs flex items-center justify-center"
+                    style={{ background: 'var(--amber-500)', color: 'white' }}
+                  >
+                    {history.length}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* History Dropdown */}
+                {showHistory && (
+                  <div 
+                    className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-lg shadow-xl border overflow-hidden z-50"
+                    style={{ 
+                      background: 'var(--cream-50)',
+                      borderColor: 'var(--border-subtle)'
+                    }}
+                  >
+                    <div 
+                      className="px-4 py-2 flex items-center justify-between border-b"
+                      style={{ borderColor: 'var(--border-subtle)' }}
+                    >
+                      <span className="text-xs font-mono uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        Recent Sessions
+                      </span>
+                      <button
+                        onClick={() => {
+                          clearHistory();
+                          setShowHistory(false);
+                        }}
+                        className="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
+                        style={{ color: 'var(--status-error)' }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Clear
+                      </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {history.map((item) => (
+                        <button
+                          key={item.session_id}
+                          onClick={() => handleHistorySelect(item.session_id)}
+                          className="w-full px-4 py-3 text-left hover:bg-black/5 dark:hover:bg-white/5 border-b last:border-0 transition-colors"
+                          style={{ borderColor: 'var(--border-subtle)' }}
+                        >
+                          <p 
+                            className="text-sm font-medium truncate"
+                            style={{ color: 'var(--text-primary)' }}
+                          >
+                            {item.original_query || 'Research'}
+                          </p>
+                          <p 
+                            className="text-xs mt-1"
+                            style={{ color: 'var(--text-muted)' }}
+                          >
+                            {new Date(item.timestamp).toLocaleDateString()} • {item.documents?.length || 0} papers
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Theme Toggle */}
@@ -106,6 +200,14 @@ function App() {
           </div>
         </div>
       </header>
+
+      {/* Click outside to close history dropdown */}
+      {showHistory && (
+        <div 
+          className="fixed inset-0 z-30" 
+          onClick={() => setShowHistory(false)}
+        />
+      )}
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -169,19 +271,23 @@ function App() {
         {(session || isLoading) && (
           <div className="mt-8 transition-opacity duration-500">
             <AgentActivity 
+              key={`${session?.session_id}-${session?.status}`}
               session={session} 
               activities={activities}
               isLoading={isLoading}
+              isPolling={isPolling}
+              onDownloadMD={downloadMarkdown}
+              onDownloadPDF={downloadPDF}
             />
           </div>
         )}
 
-        {/* New Research Button (Bottom) */}
+        {/* Action Buttons (when completed) */}
         {session?.status === 'completed' && (
-          <div className="mt-12 text-center pb-12 reveal-up">
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 pb-12 reveal-up">
             <button
               onClick={clearSession}
-              className="px-8 py-3 rounded-full font-medium transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-2 mx-auto"
+              className="px-8 py-3 rounded-full font-medium transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-2"
               style={{ 
                 background: 'var(--navy-700)',
                 color: 'var(--cream-50)'
@@ -190,11 +296,20 @@ function App() {
               <BookOpen className="w-4 h-4" />
               Start New Research
             </button>
+            <button
+              onClick={clearSession}
+              className="px-6 py-3 rounded-full font-medium transition-all duration-200 flex items-center gap-2 border"
+              style={{ 
+                borderColor: 'var(--border-medium)',
+                color: 'var(--text-secondary)'
+              }}
+            >
+              <X className="w-4 h-4" />
+              Clear Session
+            </button>
           </div>
         )}
       </main>
-
-
     </div>
   );
 }

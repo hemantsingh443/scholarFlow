@@ -11,7 +11,10 @@ import {
   Edit3, 
   AlertCircle,
   Clock,
-  BookOpen
+  BookOpen,
+  Download,
+  FileDown,
+  RefreshCw
 } from 'lucide-react';
 
 /**
@@ -27,12 +30,13 @@ const ActionIcons = {
   writing: <Edit3 className="w-5 h-5" />,
   completed: <CheckCircle className="w-5 h-5" />,
   error: <AlertCircle className="w-5 h-5" />,
+  polling: <RefreshCw className="w-5 h-5 animate-spin" />,
 };
 
 /**
  * AgentActivity - Single panel showing agent work in progress
  */
-export default function AgentActivity({ session, activities = [], isLoading }) {
+export default function AgentActivity({ session, activities = [], isLoading, isPolling, onDownloadMD, onDownloadPDF }) {
   const { plan = [], current_task_index = 0, status, documents = [], report } = session || {};
   
   // Ref for auto-scrolling activity log
@@ -63,24 +67,55 @@ export default function AgentActivity({ session, activities = [], isLoading }) {
   if (status === 'completed' && report) {
     return (
       <div className="card-elevated rounded-lg overflow-hidden reveal-up">
-        {/* Header */}
+        {/* Header with Download Buttons */}
         <div 
-          className="px-6 py-4 flex items-center gap-3"
+          className="px-6 py-4 flex items-center justify-between"
           style={{ 
             background: 'var(--cream-100)',
             borderBottom: '1px solid var(--border-subtle)'
           }}
         >
-          <span style={{ color: 'var(--status-active)' }}>
-            {ActionIcons.completed}
-          </span>
-          <div>
-            <h2 className="font-display text-lg" style={{ color: 'var(--navy-800)' }}>
-              Research Complete
-            </h2>
-            <p className="text-sm font-serif" style={{ color: 'var(--text-muted)' }}>
-              {documents.length} papers analyzed
-            </p>
+          <div className="flex items-center gap-3">
+            <span style={{ color: 'var(--status-active)' }}>
+              {ActionIcons.completed}
+            </span>
+            <div>
+              <h2 className="font-display text-lg" style={{ color: 'var(--navy-800)' }}>
+                Research Complete
+              </h2>
+              <p className="text-sm font-serif" style={{ color: 'var(--text-muted)' }}>
+                {documents.length} papers analyzed
+              </p>
+            </div>
+          </div>
+          
+          {/* Download Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onDownloadMD}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
+              style={{
+                background: 'var(--cream-200)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-subtle)'
+              }}
+              title="Download as Markdown"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">MD</span>
+            </button>
+            <button
+              onClick={onDownloadPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
+              style={{
+                background: 'var(--navy-700)',
+                color: 'var(--cream-50)'
+              }}
+              title="Download as PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">PDF</span>
+            </button>
           </div>
         </div>
 
