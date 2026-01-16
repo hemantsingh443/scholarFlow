@@ -1,0 +1,314 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+  DESIGN DIRECTION: Editorial Research Paper
+  
+  Aesthetic: Academic journal meets modern tech documentation
+  Colors: Warm cream/sepia, deep navy, amber accents
+  Typography: Playfair Display (display), Source Serif 4 (body), JetBrains Mono (code)
+  Mood: Scholarly, trustworthy, intellectually sophisticated
+*/
+
+:root {
+  /* Warm Cream Palette */
+  --cream-50: #FDFBF7;
+  --cream-100: #F9F5ED;
+  --cream-200: #F0E9DA;
+  --cream-300: #E4D9C4;
+  --cream-400: #D4C5A9;
+  
+  /* Deep Navy */
+  --navy-600: #2D3A4F;
+  --navy-700: #1F2937;
+  --navy-800: #151B26;
+  --navy-900: #0D1117;
+  
+  /* Accent: Amber/Gold */
+  --amber-400: #F59E0B;
+  --amber-500: #D97706;
+  --amber-600: #B45309;
+  
+  /* Semantic */
+  --text-primary: #1F2937;
+  --text-secondary: #4B5563;
+  --text-muted: #9CA3AF;
+  --border-subtle: rgba(31, 41, 55, 0.1);
+  --border-medium: rgba(31, 41, 55, 0.2);
+  
+  /* Status colors */
+  --status-active: #059669;
+  --status-pending: #D97706;
+  --status-error: #DC2626;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  background-color: var(--cream-50);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.7;
+}
+
+/* Typography */
+.font-display {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.font-serif {
+  font-family: 'Source Serif 4', Georgia, serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Editorial Paper Texture */
+.paper-texture {
+  background-color: var(--cream-50);
+  background-image: 
+    radial-gradient(ellipse at 20% 30%, rgba(251, 191, 36, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(45, 58, 79, 0.02) 0%, transparent 50%);
+  position: relative;
+}
+
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cream-200);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cream-400);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--navy-600);
+}
+
+/* Card Styles */
+.card-paper {
+  background: var(--cream-100);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.card-elevated {
+  background: white;
+  border: 1px solid var(--border-medium);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 10px 15px -3px rgba(0, 0, 0, 0.03);
+}
+
+/* Decorative Elements */
+.ornament-line {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--navy-600) 20%,
+    var(--navy-600) 80%,
+    transparent 100%
+  );
+  opacity: 0.2;
+}
+
+.ornament-dot::before {
+  content: '◆';
+  color: var(--amber-500);
+  font-size: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+/* Activity Badge Animation */
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+/* Typewriter effect for activity log */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter 0.5s steps(40) forwards;
+}
+
+/* Staggered reveal */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-up {
+  animation: reveal-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+/* Progress indicator */
+@keyframes progress-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.progress-flow {
+  background: linear-gradient(
+    90deg,
+    var(--cream-300) 0%,
+    var(--amber-400) 50%,
+    var(--cream-300) 100%
+  );
+  background-size: 200% 100%;
+  animation: progress-flow 2s linear infinite;
+}
+
+/* Reading indicator dots */
+@keyframes reading-dots {
+  0%, 20% { opacity: 0.2; }
+  40%, 100% { opacity: 1; }
+}
+
+.reading-dots span:nth-child(1) { animation: reading-dots 1.4s infinite; }
+.reading-dots span:nth-child(2) { animation: reading-dots 1.4s infinite 0.2s; }
+.reading-dots span:nth-child(3) { animation: reading-dots 1.4s infinite 0.4s; }
+
+/* Prose styling for reports */
+.prose-editorial {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.prose-editorial h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--navy-800);
+  border-bottom: 2px solid var(--amber-400);
+  padding-bottom: 0.5rem;
+}
+
+.prose-editorial h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--navy-700);
+}
+
+.prose-editorial h3 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--navy-600);
+}
+
+.prose-editorial p {
+  margin-bottom: 1.25rem;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.prose-editorial a {
+  color: var(--amber-600);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+.prose-editorial a:hover {
+  color: var(--amber-500);
+}
+
+.prose-editorial code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875em;
+  background: var(--cream-200);
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  color: var(--navy-700);
+}
+
+.prose-editorial blockquote {
+  border-left: 3px solid var(--amber-400);
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.prose-editorial ul, .prose-editorial ol {
+  margin: 1rem 0 1.5rem 1.5rem;
+}
+
+.prose-editorial li {
+  margin-bottom: 0.5rem;
+}
+
+.prose-editorial li::marker {
+  color: var(--amber-500);
+}
+
+/* Selection */
+::selection {
+  background: var(--amber-400);
+  color: white;
+}
+
+/* Focus states */
+input:focus, button:focus {
+  outline: 2px solid var(--amber-400);
+  outline-offset: 2px;
+}

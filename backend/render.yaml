@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: scholarflow-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false # Set this in Render dashboard
+      - key: LIGHTWEIGHT_MODE
+        value: "true"
+      - key: CHROMA_PERSIST_DIR
+        value: "/app/chroma_db"
+    disk:
+      name: chroma-storage
+      mountPath: /app/chroma_db
+      sizeGB: 1
+    healthCheckPath: /health
+    plan: free
