@@ -4,7 +4,7 @@ import { getWebSocketUrl, getApiBaseUrl } from '../api/research';
 const STORAGE_KEY = 'scholarflow_session';
 const HISTORY_KEY = 'scholarflow_history';
 const MAX_HISTORY = 10;
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 10000;
 
 export function useResearch() {
   const [session, setSession] = useState(null);
@@ -127,8 +127,17 @@ export function useResearch() {
       try {
         console.log('[Polling] Fetching...');
         const response = await fetch(`${getApiBaseUrl()}/api/session/${pollingSessionId}`);
+        
         if (!response.ok) {
           console.log('[Polling] Response not OK:', response.status);
+          if (response.status === 404 || response.status >= 500) {
+            console.log('[Polling] Session lost or server error. Stopping.');
+            setError('Session lost (servers execution likely restarted). Please start a new session.');
+            setIsPolling(false);
+            setPollingSessionId(null);
+            clearStorage();
+            setSession(null);
+          }
           return;
         }
         
