@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Search, Loader2, ArrowRight } from 'lucide-react';
 
 /**
- * Research input with editorial styling.
- * Clean, minimal aesthetic with warm tones.
+ * Research input with dynamic modern styling.
+ * Auto-expanding textarea, pill-shaped aesthetics, floating feel.
  */
 export default function ResearchInput({ onSubmit, isLoading }) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const textareaRef = useRef(null);
 
   const exampleQueries = [
     "Compare RLHF and DPO for LLM alignment",
@@ -16,6 +17,22 @@ export default function ResearchInput({ onSubmit, isLoading }) {
     "Mixture of Experts scaling laws",
   ];
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${scrollHeight}px`;
+      
+      // Only show scrollbar if content exceeds max-height (12rem = 192px)
+      if (scrollHeight > 192) {
+        textareaRef.current.style.overflowY = 'auto';
+      } else {
+        textareaRef.current.style.overflowY = 'hidden';
+      }
+    }
+  }, [query]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (query.trim() && !isLoading) {
@@ -23,58 +40,87 @@ export default function ResearchInput({ onSubmit, isLoading }) {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
   const isDisabled = !query.trim() || isLoading;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Main Input */}
-      <form onSubmit={handleSubmit}>
+    <div className="max-w-3xl mx-auto w-full">
+      {/* Main Input Container - Soft, Modern, Floating */}
+      <form onSubmit={handleSubmit} className="relative group">
         <div 
           className={`
-            card-elevated rounded-lg transition-all duration-300
-            ${isFocused ? 'ring-2 ring-amber-400/50 shadow-lg' : ''}
+            relative flex flex-col transition-all duration-300 ease-out
+            rounded-3xl border overflow-hidden
+            ${isFocused ? 'shadow-xl ring-1 ring-amber-400/30' : 'shadow-md hover:shadow-lg'}
           `}
           style={{
-            background: 'var(--cream-50)', // Explicit background matching theme
+            background: 'var(--cream-50)', // Base theme background
+            borderColor: isFocused ? 'var(--amber-400)' : 'var(--border-subtle)',
           }}
         >
-          <div className="flex items-center p-2">
+          {/* Top Section: Icon + Textarea */}
+          <div className="flex items-start p-4">
             {/* Search Icon */}
-            <div className="pl-4 pr-3 text-gray-400">
+            <div className="pt-2 pl-2 pr-4 text-gray-400 flex-shrink-0">
               <Search 
-                className={`w-5 h-5 transition-colors ${isFocused ? 'text-amber-500' : ''}`}
+                className={`w-5 h-5 transition-colors duration-300 ${isFocused ? 'text-amber-500' : ''}`}
                 style={{ color: isFocused ? 'var(--amber-500)' : 'var(--text-muted)' }}
               />
             </div>
 
-            {/* Input */}
-            <input
-              type="text"
+            {/* Auto-expanding Textarea */}
+            <textarea
+              ref={textareaRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Enter your research question..."
+              placeholder="What do you want to research today?"
+              rows={1}
               className="
-                flex-1 py-4 bg-transparent border-none outline-none
-                font-serif text-lg placeholder-gray-400
+                w-full py-2 bg-transparent border-none outline-none resize-none overflow-hidden
+                font-serif text-lg leading-relaxed
+                placeholder-gray-400/70 custom-scrollbar
               "
-              style={{ color: 'var(--text-primary)' }}
+              style={{ 
+                color: 'var(--text-primary)',
+                minHeight: '2rem',
+                maxHeight: '12rem',
+              }}
               disabled={isLoading}
             />
+          </div>
 
-            {/* Submit Button */}
+          {/* Bottom Section: Action Bar (Visible when has content or focused) */}
+          <div 
+            className={`
+              flex justify-between items-center px-4 pb-3 transition-opacity duration-300
+              ${(query.trim() || isFocused) ? 'opacity-100' : 'opacity-80'}
+            `}
+          >
+            {/* Helper text */}
+            <span className="text-xs font-serif italic pl-11 opacity-60" style={{ color: 'var(--text-secondary)' }}>
+              Press Enter to start • Shift+Enter for new line
+            </span>
+
+            {/* Submit Button - Soft Pill */}
             <button
               type="submit"
               disabled={isDisabled}
               className={`
-                px-6 py-3 rounded-md font-serif font-medium
-                transition-all duration-200 flex items-center gap-2
-                ${isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:opacity-90'}
+                px-5 py-2 rounded-full font-serif font-medium text-sm
+                transition-all duration-300 flex items-center gap-2 transform
+                ${isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95 shadow-sm'}
               `}
               style={{
-                // Active: Navy background, Cream text
-                // Disabled: Cream-300 background, Text-muted
+                // Logic: High contrast active state, muted disabled state
                 background: isDisabled ? 'var(--cream-200)' : 'var(--navy-700)',
                 color: isDisabled ? 'var(--text-muted)' : 'var(--cream-50)',
               }}
@@ -86,8 +132,8 @@ export default function ResearchInput({ onSubmit, isLoading }) {
                 </>
               ) : (
                 <>
-                  <span>Begin Research</span>
-                  {!isDisabled && <ArrowRight className="w-4 h-4" />}
+                  <span>Begin</span>
+                  {!isDisabled && <ArrowRight className="w-3 h-3" />}
                 </>
               )}
             </button>
@@ -95,21 +141,19 @@ export default function ResearchInput({ onSubmit, isLoading }) {
         </div>
       </form>
 
-      {/* Example Queries */}
+      {/* Example Queries - Minimal Chips */}
       {!isLoading && (
-        <div className="mt-6 text-center reveal-up">
-          <p className="text-sm mb-3 font-serif italic" style={{ color: 'var(--text-secondary)' }}>
-            — or explore a topic —
-          </p>
+        <div className={`mt-8 text-center transition-all duration-500 delay-100 ${query ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
           <div className="flex flex-wrap justify-center gap-2">
             {exampleQueries.map((example, idx) => (
               <button
                 key={idx}
                 onClick={() => setQuery(example)}
                 className="
-                  px-3 py-1.5 rounded-full text-sm font-serif
+                  px-3 py-1.5 rounded-full text-xs font-serif
                   border transition-all duration-200
                   hover:border-amber-400 hover:bg-black/5 dark:hover:bg-white/5
+                  hover:-translate-y-0.5
                 "
                 style={{
                   borderColor: 'var(--border-medium)',

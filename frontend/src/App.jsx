@@ -194,24 +194,7 @@ function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer 
-        className="mt-auto py-8 text-center"
-        style={{ borderTop: '1px solid var(--border-subtle)' }}
-      >
-        <p 
-          className="font-serif text-sm"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          ScholarFlow — Powered by LangGraph & OpenRouter
-        </p>
-        <p 
-          className="font-serif text-xs mt-2 opacity-70"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          Models: Xiaomi MiMo V2 Flash · Mistral Devstral 2512
-        </p>
-      </footer>
+
     </div>
   );
 }
