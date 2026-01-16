@@ -10,7 +10,7 @@ import logging
 
 from app.routers import research
 from app.routers import websocket
-from app.config import llm_config
+from app.config import llm_config, settings
 
 # Configure logging
 logging.basicConfig(
@@ -48,15 +48,25 @@ app = FastAPI(
 )
 
 # Configure CORS
+origins = [
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000",  # Alternative dev port
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+# Add production frontend URL if configured
+if settings.FRONTEND_URL:
+    origins.append(settings.FRONTEND_URL)
+    # Also add the non-https version or handle trailing slashes if needed, 
+    # but exact match is standard.
+
+# Fallback to allow all if expressly desired or for easier dev
+origins.append("*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative dev port
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-        "*",  # Allow all for deployment
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -26,6 +26,9 @@ class LLMConfig(BaseSettings):
 class Settings(BaseSettings):
     """Application settings."""
     
+    # Frontend URL for CORS (set this in production)
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
+    
     # ChromaDB persistence directory
     CHROMA_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
     
@@ -60,3 +63,4 @@ class Settings(BaseSettings):
 
 settings = Settings()
 llm_config = LLMConfig()
+
