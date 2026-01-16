@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 /* 
-  DESIGN DIRECTION: Editorial Research Paper
+  DESIGN DIRECTION: Editorial Research Paper (Dark Mode Aware)
   
   Aesthetic: Academic journal meets modern tech documentation
   Colors: Warm cream/sepia, deep navy, amber accents
@@ -14,7 +14,7 @@
 */
 
 :root {
-  /* Warm Cream Palette */
+  /* Warm Cream Palette - Light Mode */
   --cream-50: #FDFBF7;
   --cream-100: #F9F5ED;
   --cream-200: #F0E9DA;
@@ -45,6 +45,34 @@
   --status-error: #DC2626;
 }
 
+/* Dark Mode Variables */
+.dark {
+  /* Deep Space/Midnight Palette */
+  --cream-50: #0F172A;   /* slate-900 */
+  --cream-100: #1E293B;  /* slate-800 */
+  --cream-200: #334155;  /* slate-700 */
+  --cream-300: #475569;  /* slate-600 */
+  --cream-400: #94A3B8;  /* slate-400 */
+  
+  /* Text override */
+  --text-primary: #F1F5F9;   /* slate-100 */
+  --text-secondary: #CBD5E1; /* slate-300 */
+  --text-muted: #94A3B8;     /* slate-400 */
+  
+  /* Semantic overrides */
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-medium: rgba(255, 255, 255, 0.2);
+  
+  /* Navy variables shift for dark mode context */
+  --navy-600: #E2E8F0;
+  --navy-700: #F8FAFC;
+  --navy-800: #FFFFFF;
+  
+  /* Keep amber mostly the same, maybe brighter */
+  --amber-400: #FBBF24;
+  --amber-500: #F59E0B;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -71,7 +99,7 @@ body {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-/* Editorial Paper Texture */
+/* Editorial Paper Texture - Modified for Dark Mode compat */
 .paper-texture {
   background-color: var(--cream-50);
   background-image: 
@@ -80,6 +108,7 @@ body {
   position: relative;
 }
 
+/* Subtle noise texture */
 .paper-texture::before {
   content: '';
   position: absolute;
@@ -87,6 +116,10 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   opacity: 0.02;
   pointer-events: none;
+}
+
+.dark .paper-texture::before {
+  opacity: 0.05; /* Slightly more visible noise in dark mode */
 }
 
 /* Custom Scrollbar */
@@ -118,7 +151,8 @@ body {
 }
 
 .card-elevated {
-  background: white;
+  background: white; /* Will need manual override for dark mode if using strict colors */
+  background: var(--cream-50); /* Better handling for theming */
   border: 1px solid var(--border-medium);
   box-shadow: 
     0 4px 6px -1px rgba(0, 0, 0, 0.05),
@@ -138,13 +172,6 @@ body {
   opacity: 0.2;
 }
 
-.ornament-dot::before {
-  content: '◆';
-  color: var(--amber-500);
-  font-size: 0.5rem;
-  margin-right: 0.5rem;
-}
-
 /* Activity Badge Animation */
 @keyframes pulse-dot {
   0%, 100% {
@@ -159,18 +186,6 @@ body {
 
 .pulse-dot {
   animation: pulse-dot 1.5s ease-in-out infinite;
-}
-
-/* Typewriter effect for activity log */
-@keyframes typewriter {
-  from { width: 0; }
-  to { width: 100%; }
-}
-
-.typewriter {
-  overflow: hidden;
-  white-space: nowrap;
-  animation: typewriter 0.5s steps(40) forwards;
 }
 
 /* Staggered reveal */
@@ -281,6 +296,10 @@ body {
   color: var(--navy-700);
 }
 
+.dark .prose-editorial code {
+  background: var(--cream-100); /* Darker bg for code in dark mode */
+}
+
 .prose-editorial blockquote {
   border-left: 3px solid var(--amber-400);
   padding-left: 1.5rem;
@@ -301,10 +320,34 @@ body {
   color: var(--amber-500);
 }
 
-/* Selection */
-::selection {
-  background: var(--amber-400);
-  color: white;
+/* Markdown Table Styling - ADDED */
+.prose-editorial table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.95em;
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.prose-editorial th {
+  background: var(--cream-200);
+  color: var(--navy-800);
+  font-weight: 600;
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 2px solid var(--border-medium);
+}
+
+.prose-editorial td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.prose-editorial tr:last-child td {
+  border-bottom: none;
 }
 
 /* Focus states */

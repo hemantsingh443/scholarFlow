@@ -1,4 +1,6 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { BookOpen, AlertCircle, CheckCircle, FileText, ExternalLink, Loader2 } from 'lucide-react';
 
 /**
  * ResearchReport - Editorial styled markdown report display
@@ -14,21 +16,11 @@ export default function ResearchReport({ session }) {
       <div className="card-elevated rounded-lg p-12 text-center reveal-up">
         <div className="max-w-sm mx-auto">
           {/* Animated book icon */}
-          <div className="relative w-20 h-20 mx-auto mb-6">
-            <svg 
-              className="w-20 h-20" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+          <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+            <BookOpen 
+              className="w-16 h-16" 
               style={{ color: 'var(--cream-400)' }}
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={1} 
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" 
-              />
-            </svg>
+            />
             {/* Animated progress ring */}
             <div 
               className="absolute inset-0 rounded-full border-2 border-t-amber-400 animate-spin"
@@ -66,20 +58,10 @@ export default function ResearchReport({ session }) {
   if (!report) {
     return (
       <div className="card-elevated rounded-lg p-12 text-center">
-        <svg 
+        <AlertCircle 
           className="w-16 h-16 mx-auto mb-4"
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
           style={{ color: 'var(--status-error)' }}
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={1.5} 
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-          />
-        </svg>
+        />
         <h3 className="font-display text-xl mb-2" style={{ color: 'var(--navy-800)' }}>
           Unable to Generate Report
         </h3>
@@ -101,12 +83,13 @@ export default function ResearchReport({ session }) {
           Research Report
         </h2>
         <span 
-          className="text-xs font-mono uppercase tracking-wider px-3 py-1 rounded-full"
+          className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider px-3 py-1 rounded-full"
           style={{ 
             background: 'rgba(5, 150, 105, 0.1)',
             color: 'var(--status-active)'
           }}
         >
+          <CheckCircle className="w-3.5 h-3.5" />
           Complete
         </span>
       </div>
@@ -115,6 +98,7 @@ export default function ResearchReport({ session }) {
       <div className="px-8 py-8">
         <article className="prose-editorial max-w-none">
           <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => (
                 <h1 className="font-display text-2xl font-semibold mt-10 mb-4 pb-2" 
@@ -161,9 +145,7 @@ export default function ResearchReport({ session }) {
                   }}
                 >
                   {children}
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  <ExternalLink className="w-3 h-3" />
                 </a>
               ),
               ul: ({ children }) => (
@@ -216,6 +198,33 @@ export default function ResearchReport({ session }) {
               strong: ({ children }) => (
                 <strong style={{ color: 'var(--navy-800)' }}>{children}</strong>
               ),
+              // Table components for GFM
+              table: ({ children }) => (
+                <div className="overflow-x-auto my-6">
+                  <table className="w-full text-left border-collapse font-serif text-sm">
+                    {children}
+                  </table>
+                </div>
+              ),
+              thead: ({ children }) => (
+                <thead style={{ background: 'var(--cream-200)', color: 'var(--navy-800)' }}>
+                  {children}
+                </thead>
+              ),
+              tbody: ({ children }) => (
+                <tbody>{children}</tbody>
+              ),
+              tr: ({ children }) => (
+                <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  {children}
+                </tr>
+              ),
+              th: ({ children }) => (
+                <th className="px-4 py-3 font-semibold">{children}</th>
+              ),
+              td: ({ children }) => (
+                <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{children}</td>
+              ),
             }}
           >
             {report}
@@ -247,7 +256,9 @@ export default function ResearchReport({ session }) {
                 rel="noopener noreferrer"
                 className="flex items-start gap-3 p-4 rounded-lg transition-all duration-200 group"
                 style={{ 
-                  background: 'white',
+                  background: 'var(--navy-700)', // Using card background for dark mode awareness if needed, but keeping simple
+                  // Actually let's use a variable or generic bg
+                  backgroundColor: 'var(--cream-50)',
                   border: '1px solid var(--border-subtle)'
                 }}
               >
@@ -255,15 +266,10 @@ export default function ResearchReport({ session }) {
                   className="flex-shrink-0 w-10 h-10 rounded flex items-center justify-center"
                   style={{ background: 'var(--cream-200)' }}
                 >
-                  <svg 
+                  <FileText 
                     className="w-5 h-5" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
                     style={{ color: 'var(--amber-500)' }}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p 
