@@ -12,11 +12,12 @@
 > The live demo runs on **Render's free tier** (512MB RAM, shared CPU), which causes:
 >
 > - **Slow startup** — Server sleeps after inactivity, first request takes 30-60s to wake
-> - **Memory constraints** — Large PDFs (>3MB) and long papers are skipped
-> - **Potential crashes** — Heavy queries may exceed memory limits
-> - **No vector storage** — Embeddings are disabled to save memory
+> - **PDF limits** — Only first 15 pages extracted, PDFs over 3MB are skipped
+> - **Reduced depth** — Only 1 paper per research question (vs 2 locally)
+> - **Extraction crashes** — Complex PDFs may cause out-of-memory crashes during text extraction
+> - **No vector storage** — Embeddings/ChromaDB disabled to save ~200MB RAM
 >
-> **For the best experience, run locally.** Local setup has no restrictions, uses full vector search, and processes all PDFs completely.
+> **For the best experience, run locally.** Local setup has no restrictions, uses full vector search with embeddings, and processes all PDFs completely.
 
 ---
 
