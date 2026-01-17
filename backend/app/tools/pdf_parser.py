@@ -52,6 +52,9 @@ class PDFParser:
             
         Returns:
             PDF file contents as bytes
+            
+        Raises:
+            ValueError: If PDF exceeds max size (only in LIGHTWEIGHT_MODE)
         """
         logger.info(f"Downloading PDF from: {pdf_url}")
         
@@ -59,7 +62,15 @@ class PDFParser:
             response = await client.get(pdf_url, follow_redirects=True)
             response.raise_for_status()
             
-            logger.info(f"Downloaded {len(response.content)} bytes")
+            size_bytes = len(response.content)
+            size_mb = size_bytes / (1024 * 1024)
+            
+            # Only enforce size limit on resource-constrained servers
+            if settings.LIGHTWEIGHT_MODE and size_mb > 3.0:
+                logger.warning(f"PDF too large: {size_mb:.1f}MB > 3MB limit (LIGHTWEIGHT_MODE)")
+                raise ValueError(f"PDF too large ({size_mb:.1f}MB), skipping to save server resources")
+            
+            logger.info(f"Downloaded {size_bytes} bytes ({size_mb:.1f}MB)")
             return response.content
     
     def extract_text(self, pdf_bytes: bytes) -> str:
@@ -70,27 +81,34 @@ class PDFParser:
             pdf_bytes: PDF file contents
             
         Returns:
-            Extracted text from all pages
+            Extracted text from pages
         """
         logger.info("Extracting text from PDF")
         
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         full_text = ""
-        num_pages = len(doc)  # Store page count before iterating
+        total_pages = len(doc)
+        
+        # Limit pages only on resource-constrained servers
+        max_pages = 15 if settings.LIGHTWEIGHT_MODE else total_pages
+        pages_to_extract = min(total_pages, max_pages)
+        
+        if total_pages > pages_to_extract:
+            logger.info(f"Large PDF ({total_pages} pages), extracting first {pages_to_extract} pages only (LIGHTWEIGHT_MODE)")
         
         try:
-            for page_num in range(num_pages):
+            for page_num in range(pages_to_extract):
                 page = doc.load_page(page_num)
                 page_text = page.get_text()
                 full_text += page_text
                 
                 # Add page separator for clarity
-                if page_num < num_pages - 1:
+                if page_num < pages_to_extract - 1:
                     full_text += "\n\n"
         finally:
             doc.close()
         
-        logger.info(f"Extracted {len(full_text)} characters from {num_pages} pages")
+        logger.info(f"Extracted {len(full_text)} characters from {pages_to_extract}/{total_pages} pages")
         return full_text
     
     def chunk_text(self, text: str) -> List[str]:
