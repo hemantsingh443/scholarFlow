@@ -351,6 +351,28 @@ export function useResearch() {
             }
             break;
 
+          case 'activity':
+            // Granular activity events from backend (downloading, reading, summarizing, etc.)
+            addActivity(
+              data.action || 'researching',
+              data.message || 'Processing...',
+              data.paper || data.detail  // Show paper name if available
+            );
+            break;
+
+          case 'researching':
+            // Researching a specific question
+            addActivity('researching', 
+              `Researching question ${(data.question_index || 0) + 1}/${data.total_questions || 1}`,
+              data.question?.substring(0, 60)
+            );
+            break;
+
+          case 'paper_complete':
+            // Paper processing completed
+            addActivity('paper_done', `Processed: ${data.title?.substring(0, 50) || data.arxiv_id}`, data.arxiv_id);
+            break;
+
           case 'completed':
             addActivity('completed', 'Research complete!');
             const completed = {
