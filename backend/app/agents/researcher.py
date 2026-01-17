@@ -100,8 +100,9 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
                 "logs": logs
             }
         
-        # Step 2: Process top papers (limit to 2 to avoid timeout)
-        for paper_idx, paper in enumerate(papers[:2]):
+        # Step 2: Process papers (limit to 1 in lightweight mode to save resources)
+        papers_to_process = 1 if settings.LIGHTWEIGHT_MODE else 2
+        for paper_idx, paper in enumerate(papers[:papers_to_process]):
             try:
                 paper_title = paper["title"]
                 paper_url = paper["pdf_url"]
@@ -112,7 +113,7 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
                 # Emit downloading event
                 await emit_event(session_id, "activity", {
                     "action": "downloading",
-                    "message": f"Downloading PDF ({paper_idx + 1}/2)",
+                    "message": f"Downloading PDF ({paper_idx + 1}/{papers_to_process})",
                     "paper": paper_title[:60],
                     "arxiv_id": arxiv_id
                 })
