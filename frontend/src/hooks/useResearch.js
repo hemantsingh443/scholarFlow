@@ -375,15 +375,18 @@ export function useResearch() {
 
           case 'completed':
             addActivity('completed', 'Research complete!');
-            const completed = {
-              ...session,
+            const completedSession = {
+              session_id: session?.session_id || data.session_id,
+              original_query: session?.original_query || data.original_query || 'Research',
               status: 'completed',
               report: data.report,
+              plan: session?.plan || data.plan || [],
               documents: data.documents || session?.documents || []
             };
-            setSession(completed);
-            saveToStorage(completed);
-            addToHistory(completed);
+            console.log('[WS] Completed session:', completedSession.session_id, '| Query:', completedSession.original_query);
+            setSession(completedSession);
+            saveToStorage(completedSession);
+            addToHistory(completedSession);
             setIsLoading(false);
             ws.close();
             break;
