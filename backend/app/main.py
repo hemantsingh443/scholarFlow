@@ -119,6 +119,14 @@ async def startup_event():
     logger.info(f"Smart Model: {llm_config.SMART_MODEL}")
     logger.info(f"Fast Model: {llm_config.FAST_MODEL}")
     
+    # Memory optimization settings
+    logger.info(f"Lightweight Mode: {settings.LIGHTWEIGHT_MODE}")
+    logger.info(f"Skip Vector Store: {settings.SKIP_VECTOR_STORE}")
+    
+    if settings.SKIP_VECTOR_STORE:
+        logger.info("  → Vector storage DISABLED (saves ~200MB RAM)")
+        logger.info("  → Papers will be summarized but not stored in ChromaDB")
+    
     if not llm_config.API_KEY:
         logger.warning("  OPENROUTER_API_KEY not set! API calls will fail.")
     else:

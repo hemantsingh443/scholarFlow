@@ -1,11 +1,12 @@
 import logging
 from typing import Dict, Any, List
 import asyncio
+import gc
 
 from app.agents.state import ResearchState
 from app.tools.arxiv_search import arxiv_searcher
 from app.tools.pdf_parser import pdf_parser
-from app.db.chroma import vector_store
+from app.config import settings
 from app.llm.client import completion
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
         
         # Note: arxiv_searcher.search returns a list of dicts (or tuple if cached)
         papers = list(arxiv_searcher.search(current_question, max_results=3))
-        logs.append(f"📚 Found {len(papers)} papers on ArXiv")
+        logs.append(f" Found {len(papers)} papers on ArXiv")
         
         await emit_event(session_id, "activity", {
             "action": "found_papers",
@@ -88,7 +89,7 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
         })
         
         if not papers:
-            logs.append("⚠️ No papers found, moving to next question")
+            logs.append(" No papers found, moving to next question")
             await emit_event(session_id, "activity", {
                 "action": "no_papers",
                 "message": "No papers found, moving to next question"
@@ -106,7 +107,7 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
                 paper_url = paper["pdf_url"]
                 arxiv_id = paper["arxiv_id"]
                 
-                logs.append(f"📖 Processing: {paper_title[:50]}...")
+                logs.append(f" Processing: {paper_title[:50]}...")
                 
                 # Emit downloading event
                 await emit_event(session_id, "activity", {
@@ -116,15 +117,18 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
                     "arxiv_id": arxiv_id
                 })
                 
-                # Download and parse PDF
-                parsed = await pdf_parser.download_and_parse(paper_url)
+                # Download and parse PDF (skip chunking if vector store is disabled)
+                parsed = await pdf_parser.download_and_parse(
+                    paper_url, 
+                    skip_chunks=settings.SKIP_VECTOR_STORE
+                )
                 
                 # Emit reading event
                 await emit_event(session_id, "activity", {
                     "action": "reading",
-                    "message": f"Reading {parsed['num_chunks']} text chunks",
+                    "message": f"Reading {parsed['num_characters']} characters",
                     "paper": paper_title[:60],
-                    "chunks": parsed['num_chunks']
+                    "chars": parsed['num_characters']
                 })
                 
                 # Emit summarizing event
@@ -135,30 +139,39 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
                 })
                 
                 # Generate summary using fast model (Devstral)
-                summary_prompt = pdf_parser.get_summary_prompt(parsed["full_text"])
+                summary_prompt = pdf_parser.get_summary_prompt(parsed["text_for_summary"])
                 summary = completion(
                     prompt=summary_prompt,
                     model_type="fast"  # Use Devstral for summarization
                 )
                 
-                # Store chunks in vector database
-                await emit_event(session_id, "activity", {
-                    "action": "storing",
-                    "message": "Storing in vector database",
-                    "paper": paper_title[:60]
-                })
+                # Store chunks in vector database (skip if SKIP_VECTOR_STORE is enabled)
+                if not settings.SKIP_VECTOR_STORE:
+                    await emit_event(session_id, "activity", {
+                        "action": "storing",
+                        "message": "Storing in vector database",
+                        "paper": paper_title[:60]
+                    })
+                    
+                    # Lazy import to avoid loading ChromaDB when not needed
+                    from app.db.chroma import vector_store
+                    vector_store.add_documents(
+                        chunks=parsed["chunks"],
+                        metadata={
+                            "source_url": paper_url,
+                            "title": paper_title,
+                            "arxiv_id": arxiv_id
+                        },
+                        doc_id=arxiv_id
+                    )
+                else:
+                    logger.info(f"Skipping vector storage (SKIP_VECTOR_STORE=true)")
                 
-                vector_store.add_documents(
-                    chunks=parsed["chunks"],
-                    metadata={
-                        "source_url": paper_url,
-                        "title": paper_title,
-                        "arxiv_id": arxiv_id
-                    },
-                    doc_id=arxiv_id
-                )
+                # Free memory from parsed content
+                del parsed
+                gc.collect()
                 
-                # Add to documents list
+                # Add to documents list (includes full reference info)
                 new_documents.append({
                     "title": paper_title,
                     "summary": summary,
@@ -167,7 +180,7 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
                     "authors": paper.get("authors", [])
                 })
                 
-                logs.append(f"✅ Processed: {paper_title[:40]}... ({len(parsed['chunks'])} chunks)")
+                logs.append(f"Processed: {paper_title[:40]}...")
                 
                 await emit_event(session_id, "paper_complete", {
                     "title": paper_title,
@@ -177,7 +190,7 @@ async def research_topic(state: ResearchState) -> Dict[str, Any]:
                 
             except Exception as e:
                 logger.error(f"Failed to process paper {paper.get('title', 'unknown')}: {e}")
-                logs.append(f"⚠️ Failed to process paper: {str(e)[:50]}")
+                logs.append(f" Failed to process paper: {str(e)[:50]}")
                 await emit_event(session_id, "activity", {
                     "action": "error",
                     "message": f"Failed to process: {str(e)[:50]}"

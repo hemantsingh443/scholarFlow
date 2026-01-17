@@ -107,17 +107,18 @@ class PDFParser:
         logger.info(f"Split text into {len(chunks)} chunks")
         return chunks
     
-    async def download_and_parse(self, pdf_url: str) -> Dict:
+    async def download_and_parse(self, pdf_url: str, skip_chunks: bool = False) -> Dict:
         """
         Full pipeline: download PDF, extract text, and chunk it.
         
         Args:
             pdf_url: URL to the PDF file
+            skip_chunks: If True, skip chunking (for memory-constrained environments)
             
         Returns:
             Dictionary containing:
-            - full_text: Complete extracted text
-            - chunks: List of text chunks
+            - text_for_summary: Truncated text for LLM summarization
+            - chunks: List of text chunks (empty if skip_chunks=True)
             - num_chunks: Number of chunks
             - num_characters: Total character count
             - source_url: Original PDF URL
@@ -129,14 +130,29 @@ class PDFParser:
             # Extract text
             full_text = self.extract_text(pdf_bytes)
             
-            # Chunk
-            chunks = self.chunk_text(full_text)
+            # Free PDF bytes immediately to save memory
+            del pdf_bytes
+            
+            # Get truncated text for summarization (8KB max)
+            text_for_summary = full_text[:settings.MAX_CONTEXT_CHARS]
+            
+            # Chunk only if needed (for vector storage)
+            if skip_chunks:
+                chunks = []
+            else:
+                chunks = self.chunk_text(full_text)
+            
+            num_chars = len(full_text)
+            
+            # Free full text if we only need summary
+            if skip_chunks:
+                del full_text
             
             return {
-                "full_text": full_text,
+                "text_for_summary": text_for_summary,
                 "chunks": chunks,
                 "num_chunks": len(chunks),
-                "num_characters": len(full_text),
+                "num_characters": num_chars,
                 "source_url": pdf_url
             }
             

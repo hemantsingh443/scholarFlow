@@ -46,6 +46,15 @@ class Settings(BaseSettings):
     # When True, uses ChromaDB's default embeddings (no model download)
     LIGHTWEIGHT_MODE: bool = os.getenv("LIGHTWEIGHT_MODE", "false").lower() == "true"
     
+    # Skip vector store entirely (saves ~200MB RAM)
+    # Auto-enabled when LIGHTWEIGHT_MODE is True, but can be set explicitly
+    # When True: PDFs are still parsed and summarized, but not stored in ChromaDB
+    # Report quality is maintained - summaries are passed directly to Writer
+    SKIP_VECTOR_STORE: bool = os.getenv(
+        "SKIP_VECTOR_STORE",
+        os.getenv("LIGHTWEIGHT_MODE", "false")  # Inherit from LIGHTWEIGHT_MODE
+    ).lower() == "true"
+    
     # ArXiv rate limiting
     ARXIV_RATE_LIMIT_SECONDS: float = 3.0
     ARXIV_MAX_RESULTS: int = 10
