@@ -9,7 +9,6 @@ import logging
 from typing import Dict, Any
 
 from app.agents.state import ResearchState
-from app.db.chroma import vector_store
 from app.llm.client import completion
 from app.config import settings
 
@@ -78,18 +77,26 @@ def write_report(state: ResearchState) -> Dict[str, Any]:
     logs = [" Synthesizing research report..."]
     
     try:
-        # Step 1: Get relevant context via vector search
-        context_results = vector_store.query(query, n_results=10)
-        context_text = "\n\n---\n\n".join([
-            f"**Source:** {r['metadata'].get('title', 'Unknown')}\n\n{r['text']}"
-            for r in context_results
-        ])
-        
-        # Limit context size
-        if len(context_text) > settings.MAX_CONTEXT_CHARS:
-            context_text = context_text[:settings.MAX_CONTEXT_CHARS] + "\n\n[Additional context truncated]"
-        
-        logs.append(f"📊 Retrieved {len(context_results)} relevant chunks from vector store")
+        # Step 1: Get relevant context via vector search (if enabled)
+        if settings.SKIP_VECTOR_STORE:
+            # No vector store - use paper summaries as context
+            logger.info("Vector store disabled, using document summaries as context")
+            context_text = "No vector search available - using paper summaries only."
+            logs.append(" Vector store disabled, using paper summaries for context")
+        else:
+            # Lazy import to avoid loading ChromaDB when not needed
+            from app.db.chroma import vector_store
+            context_results = vector_store.query(query, n_results=10)
+            context_text = "\n\n---\n\n".join([
+                f"**Source:** {r['metadata'].get('title', 'Unknown')}\n\n{r['text']}"
+                for r in context_results
+            ])
+            
+            # Limit context size
+            if len(context_text) > settings.MAX_CONTEXT_CHARS:
+                context_text = context_text[:settings.MAX_CONTEXT_CHARS] + "\n\n[Additional context truncated]"
+            
+            logs.append(f" Retrieved {len(context_results)} relevant chunks from vector store")
         
         # Step 2: Format paper summaries
         if documents:
@@ -113,7 +120,7 @@ def write_report(state: ResearchState) -> Dict[str, Any]:
             context=context_text
         )
         
-        logs.append("🤖 Generating final report with MiMo-V2-Flash...")
+        logs.append("Generating final report with MiMo-V2-Flash...")
         
         report = completion(
             prompt=prompt,
@@ -121,7 +128,7 @@ def write_report(state: ResearchState) -> Dict[str, Any]:
             system_prompt=WRITER_SYSTEM_PROMPT
         )
         
-        logs.append("✅ Research report completed!")
+        logs.append(" Research report completed!")
         
         # Step 5: Return the report
         return {
@@ -157,12 +164,12 @@ An error occurred while generating the full report. Here are the paper summaries
                 "is_complete": True,
                 "status": "completed",
                 "error": error_message,
-                "logs": logs + [f"⚠️ Used fallback report due to error: {str(e)}"]
+                "logs": logs + [f" Used fallback report due to error: {str(e)}"]
             }
         
         return {
             "is_complete": True,
             "status": "error",
             "error": error_message,
-            "logs": logs + [f"❌ Report generation failed: {str(e)}"]
+            "logs": logs + [f" Report generation failed: {str(e)}"]
         }
