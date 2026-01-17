@@ -7,6 +7,17 @@
 ![LangGraph](https://img.shields.io/badge/LangGraph-Agentic-purple)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
+> **Note: Deployed Version Limitations**
+>
+> The live demo runs on **Render's free tier** (512MB RAM, shared CPU), which causes:
+>
+> - **Slow startup** — Server sleeps after inactivity, first request takes 30-60s to wake
+> - **Memory constraints** — Large PDFs (>3MB) and long papers are skipped
+> - **Potential crashes** — Heavy queries may exceed memory limits
+> - **No vector storage** — Embeddings are disabled to save memory
+>
+> **For the best experience, run locally.** Local setup has no restrictions, uses full vector search, and processes all PDFs completely.
+
 ---
 
 ## Features

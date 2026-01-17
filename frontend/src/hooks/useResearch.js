@@ -122,6 +122,8 @@ export function useResearch() {
     }
 
     console.log('[Polling] Starting interval for:', pollingSessionId);
+    let consecutiveErrors = 0;
+    const MAX_ERRORS = 3;
     
     const fetchSession = async () => {
       try {
@@ -129,17 +131,23 @@ export function useResearch() {
         const response = await fetch(`${getApiBaseUrl()}/api/session/${pollingSessionId}`);
         
         if (!response.ok) {
-          console.log('[Polling] Response not OK:', response.status);
-          if (response.status === 404 || response.status >= 500) {
-            console.log('[Polling] Session lost or server error. Stopping.');
-            setError('Session lost (servers execution likely restarted). Please start a new session.');
+          consecutiveErrors++;
+          console.log('[Polling] Response not OK:', response.status, `(${consecutiveErrors}/${MAX_ERRORS})`);
+          
+          if (response.status === 404 || response.status >= 500 || consecutiveErrors >= MAX_ERRORS) {
+            console.log('[Polling] Session lost or too many errors. Stopping.');
+            setError('Session lost or server unavailable. Please start a new research session.');
             setIsPolling(false);
+            setIsLoading(false);
             setPollingSessionId(null);
             clearStorage();
             setSession(null);
           }
           return;
         }
+        
+        // Reset error counter on success
+        consecutiveErrors = 0;
         
         const data = await response.json();
         console.log('[Polling] Got:', data.status, '| Report:', !!data.report);
@@ -187,7 +195,16 @@ export function useResearch() {
           });
         }
       } catch (e) {
-        console.error('[Polling] Error:', e);
+        consecutiveErrors++;
+        console.error('[Polling] Network error:', e.message, `(${consecutiveErrors}/${MAX_ERRORS})`);
+        
+        if (consecutiveErrors >= MAX_ERRORS) {
+          console.log('[Polling] Too many network errors. Stopping.');
+          setError('Cannot reach server. Please check your connection or try again later.');
+          setIsPolling(false);
+          setIsLoading(false);
+          setPollingSessionId(null);
+        }
       }
     };
 
