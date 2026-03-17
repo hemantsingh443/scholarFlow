@@ -13,11 +13,11 @@ class LLMConfig(BaseSettings):
     
     # Smart model for Planning/Synthesis - Xiaomi MiMo-V2-Flash
     # 309B MoE model, excellent for reasoning and agentic workflows
-    SMART_MODEL: str = "xiaomi/mimo-v2-flash:free"
+    SMART_MODEL: str = "arcee-ai/trinity-large-preview:free"
     
     # Fast model for Summarization/Extraction - Mistral Devstral
     # 123B model, optimized for coding and multi-file understanding
-    FAST_MODEL: str = "mistralai/devstral-2512:free"
+    FAST_MODEL: str = "arcee-ai/trinity-large-preview:free"
     
     class Config:
         env_prefix = "OPENROUTER_"
